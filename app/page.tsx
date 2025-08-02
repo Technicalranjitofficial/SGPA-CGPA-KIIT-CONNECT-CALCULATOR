@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,9 +25,19 @@ import {
   GraduationCap,
   Code,
   Cpu,
-  Zap
+  Zap,
+  Database
 } from 'lucide-react';
 import jsPDF from 'jspdf';
+
+interface StudentDetails {
+  name: string;
+  rollNumber: string;
+  branch: string;
+  email: string;
+  phone: string;
+  year: string;
+}
 
 interface Subject {
   id: string;
@@ -58,14 +68,13 @@ interface SGPACalculatorState {
 }
 
 const gradeScale = {
-  'A+': 10,
-  'A': 9,
-  'B+': 8,
+  'O': 10,
+  'E': 9,
+  'A': 8,
   'B': 7,
-  'C+': 6,
-  'C': 5,
-  'D': 4,
-  'F': 0
+  'C': 6,
+  'D': 5,
+  'F': 2
 };
 
 const branches = {
@@ -75,260 +84,1925 @@ const branches = {
   'IT': 'Information Technology',
 };
 
-const branchSubjects = {
+export const branchSubjects = {
   'CSE': {
     1: [
-      { name: 'Mathematics I', credits: 4 },
-      { name: 'Physics', credits: 4 },
-      { name: 'Chemistry', credits: 3 },
-      { name: 'Programming in C', credits: 4 },
-      { name: 'Engineering Graphics', credits: 3 },
-      { name: 'English Communication', credits: 2 }
+      {
+        name: "PHYSICS",
+        credits: "3",
+        SUBCODE: "PH10001",
+        grade:"O",
+      },
+      {
+        name: "Differential Equations and Linear Algebra",
+        credits: "4",
+        SUBCODE: "MA11001",
+        grade:"O",
+      },
+      {
+        name: "SCIENCE OF LIVING SYSTEMS",
+        credits: "2",
+        SUBCODE: "LS10001",
+        grade:"O",
+      },
+      {
+        name: "ENVIROMENTAL SCIENCE",
+        credits: "2",
+        SUBCODE: "CH10003",
+        grade:"O",
+      },
+      {
+        name: "PHYSICS LAB",
+        credits: "1",
+        SUBCODE: "PH19001",
+        grade:"O",
+      },
+      {
+        name: "PROGRAMMING LAB",
+        credits: "4",
+        SUBCODE: "CS19001",
+        grade:"O",
+      },
+      {
+        name: "ENGINEERING DRAWING & GRAPHICS",
+        credits: "1",
+        SUBCODE: "CE18001",
+        grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-II",
+        credits: "2",
+        SUBCODE: null,
+        grade:"O",
+      },
+      {
+        name: "SCIENCE ELECTIVE",
+        credits: "2",
+        SUBCODE: null,
+        grade:"O",
+      },
     ],
+
     2: [
-      { name: 'Mathematics II', credits: 4 },
-      { name: 'Data Structures', credits: 4 },
-      { name: 'Digital Logic Design', credits: 3 },
-      { name: 'Object Oriented Programming', credits: 4 },
-      { name: 'Environmental Science', credits: 2 },
-      { name: 'Workshop Practice', credits: 3 }
+      {
+        name: "CHEMISTRY",
+        credits: "3",
+        SUBCODE: "CH10001",
+        grade:"O",
+      },
+      {
+        name: "Transform Calculus and Numerical Analysis",
+        credits: "4",
+        SUBCODE: "MA11002",
+        grade:"O",
+      },
+      {
+        name: "ENGLISH",
+        credits: "2",
+        SUBCODE: "HS10001",
+        grade:"O",
+      },
+      {
+        name: "BASIC ELECTRONICS",
+        credits: "2",
+        SUBCODE: "EC10001",
+        grade:"O",
+      },
+      {
+        name: "CHEMISTRY LAB",
+        credits: "1",
+        SUBCODE: "CH19001",
+        grade:"O",
+      },
+      {
+        name: "YOGA",
+        credits: "1",
+        SUBCODE: "YG18001",
+        grade:"O",
+      },
+      {
+        name: "ENGINEERING LAB",
+        credits: "1",
+        SUBCODE: "EX19001",
+        grade:"O",
+      },
+      {
+        name: "WORKSHOP",
+        credits: "1",
+        SUBCODE: "ME18001",
+         Grade:"O",
+      },
+      {
+        name: "COMMUNICATION LAB",
+        credits: "1",
+        SUBCODE: "HS18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-I",
+        credits: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "SOCIAL SCIENCE ELECTIVE",
+        credits: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
     ],
     3: [
-      { name: 'Mathematics III', credits: 4 },
-      { name: 'Database Management Systems', credits: 4 },
-      { name: 'Computer Organization', credits: 3 },
-      { name: 'Operating Systems', credits: 4 },
-      { name: 'Software Engineering', credits: 3 },
-      { name: 'Web Technologies', credits: 2 }
+      {
+        name: "DS",
+        Credit: "4",
+        SUBCODE: "CS2001",
+         Grade:"O",
+      },
+      {
+        name: "Digital Systems Design",
+        Credit: "3",
+        SUBCODE: "EC20005",
+         Grade:"O",
+      },
+      {
+        name: "Scientific and Technical Writing",
+        Credit: "2",
+        SUBCODE: "EX20003",
+         Grade:"-1",
+      },
+      //  {
+      //   name: "HASS Elective - II",
+      //   Credit: "3",
+      //   SUBCODE: "EX20003",
+      //    Grade:"-1",
+      // },
+      {
+        name: "Industry 4.0 Technologies",
+        Credit: "2",
+        SUBCODE: "EX20001",
+         Grade:"O",
+      },
+      {
+        name: "Automata Theory and Formal Languages",
+        Credit: "4",
+        SUBCODE: "CS21003",
+         Grade:"O",
+      },
+      {
+        name: "PS",
+        Credit: "4",
+        SUBCODE: "MA2011",
+         Grade:"O",
+      },
+      {
+        name: "DSA LAB",
+        Credit: "1",
+        SUBCODE: "CS2091",
+         Grade:"O",
+      },
+      {
+        name: "Digital Systems Design LAB",
+        Credit: "1",
+        SUBCODE: "EC29005",
+         Grade:"O",
+      },
     ],
     4: [
-      { name: 'Analysis of Algorithms', credits: 4 },
-      { name: 'Computer Networks', credits: 4 },
-      { name: 'Theory of Computation', credits: 3 },
-      { name: 'Microprocessors', credits: 3 },
-      { name: 'Java Programming', credits: 3 },
-      { name: 'Technical Communication', credits: 3 }
+      {
+        name: "Scientific and Technical Writing",
+        Credit: "2",
+        SUBCODE: "EX20003",
+         Grade:"-1",
+      },
+       {
+        name: "HASS Elective - II",
+        Credit: "3",
+        SUBCODE: "EX20003",
+         Grade:"-1",
+      },
+
+      
+
+      {
+        name: "OOPJ",
+        Credit: "3",
+        SUBCODE: "CS20004",
+         Grade:"O",
+      },
+      {
+        name: "OS",
+        Credit: "3",
+        SUBCODE: "CS2002",
+         Grade:"O",
+      },
+      {
+        name: "Discrete Structures",
+        Credit: "4",
+        SUBCODE: "MA21002",
+         Grade:"O",
+      },
+      {
+        name: "COA",
+        Credit: "4",
+        SUBCODE: "CS21002",
+         Grade:"O",
+      },
+  
+      {
+        name: "DBMS",
+        Credit: "3",
+        SUBCODE: "CS20006",
+         Grade:"O",
+      },
+      {
+        name: "OOPJ LAB",
+        Credit: "1",
+        SUBCODE: "CS29004",
+         Grade:"O",
+      },
+      {
+        name: "OS LAB",
+        Credit: "1",
+        SUBCODE: "CS29002",
+         Grade:"O",
+      },
+      {
+        name: "DBMS LAB",
+        Credit: "1",
+        SUBCODE: "CS29006",
+         Grade:"O",
+      },
+      {
+        name: "Vocational Electives",
+        Credit: "1",
+        SUBCODE: "CS28001",
+         Grade:"O",
+      },
     ],
     5: [
-      { name: 'Machine Learning', credits: 4 },
-      { name: 'Compiler Design', credits: 4 },
-      { name: 'Computer Graphics', credits: 3 },
-      { name: 'Information Security', credits: 3 },
-      { name: 'Elective I', credits: 3 },
-      { name: 'Mini Project', credits: 3 }
+      {
+        name: "COMPUTER NETWORKS",
+        Credit: "3",
+        SUBCODE: "IT3009",
+         Grade:"O",
+      },
+      {
+        name: "DESIGN & ANALYSIS OF ALGO", 
+        Credit: "3",
+        SUBCODE: "CS2012",
+         Grade:"O",
+      },
+      
+      {
+        name: "SOFTWARE ENGINEERING",
+        Credit: "4",
+        SUBCODE: "IT3003",
+         Grade:"O",
+      },
+      {
+        name: "Engineering Economics",
+        Credit: "3",
+        SUBCODE: "HS30101",
+         Grade:"O",
+      },
+      {
+        name: "NETWORK LAB",
+         Grade:"O",
+        Credit: "1",
+        SUBCODE: "IT3095",
+      },
+      {
+        name: "ALGORITHM LAB",
+        Credit: "1",
+        SUBCODE: "CS2098",
+         Grade:"O",
+      },
+      {
+        name: "Professional Elective-1",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Professional Elective-2",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "K-Explore Open Elective-I",
+        Credit: "1",
+        SUBCODE: "CS3010",
+         Grade:"O",
+      },
     ],
     6: [
-      { name: 'Artificial Intelligence', credits: 4 },
-      { name: 'Mobile Computing', credits: 3 },
-      { name: 'Cloud Computing', credits: 3 },
-      { name: 'Data Mining', credits: 3 },
-      { name: 'Elective II', credits: 3 },
-      { name: 'Seminar', credits: 4 }
+      {
+        name: "UHV",
+        Credit: "3",
+        SUBCODE: "HS30401",
+         Grade:"O",
+      },
+      {
+        name: "AI",
+        Credit: "3",
+        SUBCODE: "CS30002",
+         Grade:"O",
+      },
+      {
+        name: "ML",
+        Credit: "4",
+        SUBCODE: "",
+         Grade:"O",
+      },
+      {
+        name: "AI LAB",
+        Credit: "1",
+        SUBCODE: "IT3098",
+         Grade:"O",
+      },
+      {
+        name: "MINI PROJECT",
+        Credit: "2",
+        SUBCODE: "CS3082",
+         Grade:"O",
+      },
+      
+      {
+        name: "Application Development LAB",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Professional Elective-III",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "HASS Elective- III ",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Open Elective-II/MI-1",
+        Credit: "3",
+        SUBCODE: "CS30036",
+         Grade:"O",
+      },
     ],
     7: [
-      { name: 'Big Data Analytics', credits: 4 },
-      { name: 'Internet of Things', credits: 3 },
-      { name: 'Blockchain Technology', credits: 3 },
-      { name: 'Elective III', credits: 3 },
-      { name: 'Elective IV', credits: 3 },
-      { name: 'Major Project I', credits: 4 }
+      {
+        name: "HRM",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "PROFESSIONAL PRACTICE,LAW & ETHICS",
+        Credit: "2",
+        SUBCODE: "HS4001",
+         Grade:"O",
+      },
+    
+      {
+        name: "PROJECT 1/INTERNSHIP",
+        Credit: "3",
+        SUBCODE: "CS4081",
+         Grade:"O",
+      },
+      {
+        name: "PRACTICAL TRAINING",
+        Credit: "2",
+        SUBCODE: "CS4083",
+         Grade:"O",
+      },
+     
+      {
+        name: "Coursera Elective",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
     ],
-    8: [
-      { name: 'Industry Internship', credits: 6 },
-      { name: 'Major Project II', credits: 8 },
-      { name: 'Professional Ethics', credits: 2 },
-      { name: 'Entrepreneurship', credits: 2 },
-      { name: 'Comprehensive Viva', credits: 2 }
-    ]
   },
-  'CSSE': {
-    1: [
-      { name: 'Mathematics I', credits: 4 },
-      { name: 'Physics', credits: 4 },
-      { name: 'Chemistry', credits: 3 },
-      { name: 'Basic Electronics', credits: 4 },
-      { name: 'Engineering Graphics', credits: 3 },
-      { name: 'English Communication', credits: 2 }
-    ],
-    2: [
-      { name: 'Mathematics II', credits: 4 },
-      { name: 'Circuit Analysis', credits: 4 },
-      { name: 'Electronic Devices', credits: 4 },
-      { name: 'Programming in C', credits: 3 },
-      { name: 'Environmental Science', credits: 2 },
-      { name: 'Workshop Practice', credits: 3 }
-    ],
-    3: [
-      { name: 'Mathematics III', credits: 4 },
-      { name: 'Analog Electronics', credits: 4 },
-      { name: 'Digital Electronics', credits: 4 },
-      { name: 'Signals & Systems', credits: 3 },
-      { name: 'Network Theory', credits: 3 },
-      { name: 'Electromagnetic Theory', credits: 2 }
-    ],
-    4: [
-      { name: 'Microprocessors', credits: 4 },
-      { name: 'Communication Systems', credits: 4 },
-      { name: 'Control Systems', credits: 3 },
-      { name: 'VLSI Design', credits: 3 },
-      { name: 'Antenna Theory', credits: 3 },
-      { name: 'Technical Communication', credits: 3 }
-    ],
-    5: [
-      { name: 'Digital Signal Processing', credits: 4 },
-      { name: 'Microwave Engineering', credits: 4 },
-      { name: 'Embedded Systems', credits: 3 },
-      { name: 'Optical Communication', credits: 3 },
-      { name: 'Elective I', credits: 3 },
-      { name: 'Mini Project', credits: 3 }
-    ],
-    6: [
-      { name: 'Wireless Communication', credits: 4 },
-      { name: 'Digital Image Processing', credits: 3 },
-      { name: 'Satellite Communication', credits: 3 },
-      { name: 'Power Electronics', credits: 3 },
-      { name: 'Elective II', credits: 3 },
-      { name: 'Seminar', credits: 4 }
-    ],
-    7: [
-      { name: 'Mobile Communication', credits: 4 },
-      { name: 'Radar Systems', credits: 3 },
-      { name: 'Biomedical Electronics', credits: 3 },
-      { name: 'Elective III', credits: 3 },
-      { name: 'Elective IV', credits: 3 },
-      { name: 'Major Project I', credits: 4 }
-    ],
-    8: [
-      { name: 'Industry Internship', credits: 6 },
-      { name: 'Major Project II', credits: 8 },
-      { name: 'Professional Ethics', credits: 2 },
-      { name: 'Entrepreneurship', credits: 2 },
-      { name: 'Comprehensive Viva', credits: 2 }
-    ]
-  },
-  'CSCE': {
-    1: [
-      { name: 'Mathematics I', credits: 4 },
-      { name: 'Physics', credits: 4 },
-      { name: 'Chemistry', credits: 3 },
-      { name: 'Engineering Mechanics', credits: 4 },
-      { name: 'Engineering Graphics', credits: 3 },
-      { name: 'English Communication', credits: 2 }
-    ],
-    2: [
-      { name: 'Mathematics II', credits: 4 },
-      { name: 'Strength of Materials', credits: 4 },
-      { name: 'Thermodynamics', credits: 4 },
-      { name: 'Manufacturing Processes', credits: 3 },
-      { name: 'Environmental Science', credits: 2 },
-      { name: 'Workshop Practice', credits: 3 }
-    ],
-    3: [
-      { name: 'Mathematics III', credits: 4 },
-      { name: 'Fluid Mechanics', credits: 4 },
-      { name: 'Material Science', credits: 3 },
-      { name: 'Machine Design I', credits: 4 },
-      { name: 'Heat Transfer', credits: 3 },
-      { name: 'Kinematics of Machines', credits: 2 }
-    ],
-    4: [
-      { name: 'Dynamics of Machines', credits: 4 },
-      { name: 'IC Engines', credits: 4 },
-      { name: 'Machine Design II', credits: 3 },
-      { name: 'Manufacturing Technology', credits: 3 },
-      { name: 'Metrology', credits: 3 },
-      { name: 'Technical Communication', credits: 3 }
-    ],
-    5: [
-      { name: 'Automobile Engineering', credits: 4 },
-      { name: 'Power Plant Engineering', credits: 4 },
-      { name: 'Industrial Engineering', credits: 3 },
-      { name: 'Refrigeration & AC', credits: 3 },
-      { name: 'Elective I', credits: 3 },
-      { name: 'Mini Project', credits: 3 }
-    ],
-    6: [
-      { name: 'Robotics & Automation', credits: 4 },
-      { name: 'Finite Element Analysis', credits: 3 },
-      { name: 'Operations Research', credits: 3 },
-      { name: 'Quality Control', credits: 3 },
-      { name: 'Elective II', credits: 3 },
-      { name: 'Seminar', credits: 4 }
-    ],
-    7: [
-      { name: 'Advanced Manufacturing', credits: 4 },
-      { name: 'Renewable Energy', credits: 3 },
-      { name: 'Project Management', credits: 3 },
-      { name: 'Elective III', credits: 3 },
-      { name: 'Elective IV', credits: 3 },
-      { name: 'Major Project I', credits: 4 }
-    ],
-    8: [
-      { name: 'Industry Internship', credits: 6 },
-      { name: 'Major Project II', credits: 8 },
-      { name: 'Professional Ethics', credits: 2 },
-      { name: 'Entrepreneurship', credits: 2 },
-      { name: 'Comprehensive Viva', credits: 2 }
-    ]
-  },
+
   'IT': {
-    1: [
-      { name: 'Mathematics I', credits: 4 },
-      { name: 'Physics', credits: 4 },
-      { name: 'Chemistry', credits: 3 },
-      { name: 'Basic Electronics', credits: 4 },
-      { name: 'Engineering Graphics', credits: 3 },
-      { name: 'English Communication', credits: 2 }
+   1: [
+      {
+        name: "CHEMISTRY",
+        Credit: "3",
+        SUBCODE: "CH10001",
+         Grade:"O",
+      },
+      {
+        name: "Transform Calculus and Numerical Analysis",
+        Credit: "4",
+        SUBCODE: "MA11002",
+         Grade:"O",
+      },
+      {
+        name: "ENGLISH",
+        Credit: "2",
+        SUBCODE: "HS10001",
+         Grade:"O",
+      },
+      {
+        name: "BASIC ELECTRONICS",
+        Credit: "2",
+        SUBCODE: "EC10001",
+         Grade:"O",
+      },
+      {
+        name: "CHEMISTRY LAB",
+        Credit: "1",
+        SUBCODE: "CH19001",
+         Grade:"O",
+      },
+      {
+        name: "YOGA",
+        Credit: "1",
+        SUBCODE: "YG18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING LAB",
+        Credit: "1",
+        SUBCODE: "EX19001",
+         Grade:"O",
+      },
+      {
+        name: "WORKSHOP",
+        Credit: "1",
+        SUBCODE: "ME18001",
+         Grade:"O",
+      },
+      {
+        name: "COMMUNICATION LAB",
+        Credit: "1",
+        SUBCODE: "HS18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "HASS ELECTIVE-I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
     ],
     2: [
-      { name: 'Mathematics II', credits: 4 },
-      { name: 'Data Structures', credits: 4 },
-      { name: 'Computer Organization', credits: 4 },
-      { name: 'Operating Systems', credits: 3 },
-      { name: 'Database Management Systems', credits: 3 },
+      {
+        name: "PHYSICS",
+        Credit: "3",
+        SUBCODE: "PH10001",
+         Grade:"O",
+      },
+      {
+        name: "Differential Equations and Linear Algebra",
+        Credit: "4",
+        SUBCODE: "MA11001",
+         Grade:"O",
+      },
+      {
+        name: "SCIENCE OF LIVING SYSTEMS",
+        Credit: "2",
+        SUBCODE: "LS10001",
+         Grade:"O",
+      },
+      {
+        name: "ENVIROMENTAL SCIENCE",
+        Credit: "2",
+        SUBCODE: "CH10003",
+         Grade:"O",
+      },
+      {
+        name: "PHYSICS LAB",
+        Credit: "1",
+        SUBCODE: "PH19001",
+         Grade:"O",
+      },
+      {
+        name: "PROGRAMMING LAB",
+        Credit: "4",
+        SUBCODE: "CS19001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING DRAWING & GRAPHICS",
+        Credit: "1",
+        SUBCODE: "CE18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-II",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "SCIENCE ELECTIVE",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
     ],
     3: [
-      { name: 'Mathematics III', credits: 4 },
-      { name: 'Computer Networks', credits: 4 },
-      { name: 'Compiler Design', credits: 3 },
-      { name: 'Artificial Intelligence', credits: 3 },
-      { name: 'Software Engineering', credits: 3 },
+      {
+        name: "DS",
+        Credit: "4",
+        SUBCODE: "CS21001",
+         Grade:"O",
+      },
+
+      {
+        name: "Communication Engineering",
+        Credit: "3",
+        SUBCODE: "EC20008",
+         Grade:"O",
+      },
+      {
+        name: "OOPJ",
+        Credit: "3",
+        SUBCODE: "CS20004",
+         Grade:"O",
+      },
+      
+      {
+        name: "COA",
+        Credit: "4",
+        SUBCODE: "CS21002",
+         Grade:"O",
+      },
+      {
+        name: "PS",
+        Credit: "4",
+        SUBCODE: "MA21001",
+         Grade:"O",
+      },
+      {
+        name: "Scientific and Technical Writing",
+        Credit: "2",
+        SUBCODE: "EX20003",
+         Grade:"O",
+      },
+      {
+        name: "DS LAB",
+        Credit: "1",
+        SUBCODE: "CS29001",
+         Grade:"O",
+      },{
+        name: "Communication Engineering LAB",
+        Credit: "1",
+        SUBCODE: "EC29002",
+         Grade:"O",
+      },
+      {
+        name: "OOPJ LAB",
+        Credit: "1",
+        SUBCODE: "CS29004",
+         Grade:"O",
+      },
     ],
     4: [
-      { name: 'Data Structures', credits: 4 },
-      { name: 'Computer Organization', credits: 4 },
-      { name: 'Operating Systems', credits: 3 },
-      { name: 'Database Management Systems', credits: 3 },
+      {
+        name: "Industry 4.0 Technologies",
+        Credit: "2",
+        SUBCODE: "EX20001",
+         Grade:"O",
+      },
+      {
+        name: "Discrete Structures",
+        Credit: "4",
+        SUBCODE: "MA21002",
+         Grade:"O",
+      },
+      {
+        name: "OS",
+        Credit: "3",
+        SUBCODE: "CS20002",
+         Grade:"O",
+      },
+
+      {
+        name: "Engineering Economics",
+        Credit: "3",
+        SUBCODE: "HS30101",
+         Grade:"O",
+      },
+      {
+        name: "Information Theory and Coding",
+        Credit: "3",
+        SUBCODE: "CS20008",
+         Grade:"O",
+      },
+      {
+        name: "DBMS",
+        Credit: "3",
+        SUBCODE: "CS20006",
+         Grade:"O",
+      },
+      
+      {
+        name: "OS LAB",
+        Credit: "1",
+        SUBCODE: "CS29002",
+         Grade:"O",
+      },
+      {
+        name: "DBMS LAB",
+        Credit: "1",
+        SUBCODE: "CS29004",
+         Grade:"O",
+      },
+      {
+        name: "Vocational Electives",
+        Credit: "1",
+        SUBCODE: "CS28001",
+         Grade:"O",
+      },
     ],
     5: [
-      { name: 'Data Structures', credits: 4 },
-      { name: 'Computer Organization', credits: 4 },
-      { name: 'Operating Systems', credits: 3 },
-      { name: 'Database Management Systems', credits: 3 },
+      {
+        name: "COMPUTER NETWORKS",
+        Credit: "3",
+        SUBCODE: "IT3005",
+         Grade:"O",
+      },
+      {
+        name: "DESIGN & ANALYSIS OF ALGO",
+        Credit: "3",
+        SUBCODE: "CS2012",
+         Grade:"O",
+      },
+      {
+        name: "IOT",
+        Credit: "3",
+        SUBCODE: "IT3007",
+         Grade:"O",
+      },
+      {
+        name: "SOFTWARE ENGINEERING",
+        Credit: "4",
+        SUBCODE: "IT3003",
+         Grade:"O",
+      },
+      {
+        name: "NETWORK LAB",
+        Credit: "1",
+        SUBCODE: "IT3095",
+         Grade:"O",
+      },
+      {
+        name: "ALGORITHM LAB",
+        Credit: "1",
+        SUBCODE: "CS2098",
+         Grade:"O",
+      },
+      {
+        name: "ELECTIVE-1",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "ELECTIVE-2",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
     ],
     6: [
-      { name: 'Data Structures', credits: 4 },
-      { name: 'Computer Organization', credits: 4 },
-      { name: 'Operating Systems', credits: 3 },
-      { name: 'Database Management Systems', credits: 3 },
+      {
+        name: "HASS Elective -III",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Machine Learning",
+        Credit: "4",
+        SUBCODE: "CS31002",
+         Grade:"O",
+      },
+      {
+        name: "Data Science and Analytics",
+        Credit: "3",
+        SUBCODE: "CS30004",
+         Grade:"O",
+      },
+      {
+        name: "Professional Elective-III",
+        Credit: "3",
+        SUBCODE: "IT3098",
+         Grade:"O",
+      },
+      {
+        name: "Open Elective–II/ MI-I",
+        Credit: "3",
+        SUBCODE: "CS3082",
+         Grade:"O",
+      },
+      {
+        name: "Universal Human Values",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Data Analytics Laboratory",
+        Credit: "1",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Advance Programming Laboratory",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Mini Project",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
     ],
     7: [
-      { name: 'Data Structures', credits: 4 },
-      { name: 'Computer Organization', credits: 4 },
-      { name: 'Operating Systems', credits: 3 },
-      { name: 'Database Management Systems', credits: 3 },
+      {
+        name: "HRM",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "PROFESSIONAL PRACTICE,LAW & ETHICS",
+        Credit: "2",
+        SUBCODE: "HS4001",
+         Grade:"O",
+      },
+    
+      {
+        name: "PROJECT 1/INTERNSHIP",
+        Credit: "3",
+        SUBCODE: "CS4081",
+         Grade:"O",
+      },
+      {
+        name: "PRACTICAL TRAINING",
+        Credit: "2",
+        SUBCODE: "CS4083",
+         Grade:"O",
+      },
+     
+      {
+        name: "Coursera Elective",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      }
+      
     ],
-    8: [
-      { name: 'Industry Internship', credits: 6 },
-      { name: 'Major Project II', credits: 8 },
-      { name: 'Professional Ethics', credits: 2 },
-      { name: 'Entrepreneurship', credits: 2 },
-      { name: 'Comprehensive Viva', credits: 2 }
-    ]
-  }
+  },
+
+  'CSCE': {
+   1: [
+      {
+        name: "CHEMISTRY",
+        Credit: "3",
+        SUBCODE: "CH10001",
+         Grade:"O",
+      },
+      {
+        name: "Transform Calculus and Numerical Analysis",
+        Credit: "4",
+        SUBCODE: "MA11002",
+         Grade:"O",
+      },
+      {
+        name: "ENGLISH",
+        Credit: "2",
+        SUBCODE: "HS10001",
+         Grade:"O",
+      },
+      {
+        name: "BASIC ELECTRONICS",
+        Credit: "2",
+        SUBCODE: "EC10001",
+         Grade:"O",
+      },
+      {
+        name: "CHEMISTRY LAB",
+        Credit: "1",
+        SUBCODE: "CH19001",
+         Grade:"O",
+      },
+      {
+        name: "YOGA",
+        Credit: "1",
+        SUBCODE: "YG18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING LAB",
+        Credit: "1",
+        SUBCODE: "EX19001",
+         Grade:"O",
+      },
+      {
+        name: "WORKSHOP",
+        Credit: "1",
+        SUBCODE: "ME18001",
+         Grade:"O",
+      },
+      {
+        name: "COMMUNICATION LAB",
+        Credit: "1",
+        SUBCODE: "HS18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "HASS Elective - I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+    ],
+    2: [
+      {
+        name: "PHYSICS",
+        Credit: "3",
+        SUBCODE: "PH10001",
+         Grade:"O",
+      },
+      {
+        name: "Differential Equations and Linear Algebra",
+        Credit: "4",
+        SUBCODE: "MA11001",
+         Grade:"O",
+      },
+      {
+        name: "SCIENCE OF LIVING SYSTEMS",
+        Credit: "2",
+        SUBCODE: "LS10001",
+         Grade:"O",
+      },
+      {
+        name: "ENVIROMENTAL SCIENCE",
+        Credit: "2",
+        SUBCODE: "CH10003",
+         Grade:"O",
+      },
+      {
+        name: "PHYSICS LAB",
+        Credit: "1",
+        SUBCODE: "PH19001",
+         Grade:"O",
+      },
+      {
+        name: "PROGRAMMING LAB",
+        Credit: "4",
+        SUBCODE: "CS19001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING DRAWING & GRAPHICS",
+        Credit: "1",
+        SUBCODE: "CE18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-II",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "SCIENCE ELECTIVE",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+    ],
+    3: [
+      {
+        name: "DS",
+        Credit: "4",
+        SUBCODE: "CS21001",
+         Grade:"O",
+      },
+
+      {
+        name: "Scientific and Technical Writing",
+        Credit: "2",
+        SUBCODE: "EX20003",
+         Grade:"O",
+      },
+      {
+        name: "Industry 4.0 Technologies",
+        Credit: "2",
+        SUBCODE: "EX20001",
+         Grade:"O",
+      },
+      {
+        name: "Digital Systems Design",
+        Credit: "3",
+        SUBCODE: "EC20005",
+         Grade:"O",
+      },
+      {
+        name: "PS",
+        Credit: "4",
+        SUBCODE: "MA21001",
+         Grade:"O",
+      },
+      {
+        name: "Communication Engineering",
+        Credit: "3",
+        SUBCODE: "EC20008",
+         Grade:"O",
+      },
+      {
+        name: "DS LAB",
+        Credit: "1",
+        SUBCODE: "CS29001",
+         Grade:"O",
+      },
+      {
+        name: "Communication Engineering LAB",
+        Credit: "1",
+        SUBCODE: "EC29002",
+         Grade:"O",
+      },
+      {
+        name: "DSD LAB",
+        Credit: "1",
+        SUBCODE: "EC29005",
+         Grade:"O",
+      },
+    ],
+    4: [
+      {
+        name: "OOPJ",
+        Credit: "3",
+        SUBCODE: "CS20004",
+         Grade:"O",
+      },
+      {
+        name: "Discrete Structures",
+        Credit: "4",
+        SUBCODE: "MA21002",
+         Grade:"O",
+      },
+      {
+        name: "OS",
+        Credit: "3",
+        SUBCODE: "CS20002",
+         Grade:"O",
+      },
+      {
+        name: "Engineering Economics",
+        Credit: "3",
+        SUBCODE: "HS30101",
+         Grade:"O",
+      },
+
+      
+      {
+        name: "Information Security",
+        Credit: "3",
+        SUBCODE: "CS20010",
+         Grade:"O",
+      },
+      {
+        name: "DBMS",
+        Credit: "3",
+        SUBCODE: "CS20006",
+         Grade:"O",
+      },
+      {
+        name: "OOPJ LAB",
+        Credit: "1",
+        SUBCODE: "CS29004",
+         Grade:"O",
+      },
+      {
+        name: "OS LAB",
+        Credit: "1",
+        SUBCODE: "CS29002",
+         Grade:"O",
+      },
+      {
+        name: "DBMS LAB",
+        Credit: "1",
+        SUBCODE: "CS29006",
+         Grade:"O",
+      },
+      {
+        name: "Vocational Electives",
+        Credit: "1",
+        SUBCODE: "CS28001",
+         Grade:"O",
+      },
+    ],
+    5: [
+      {
+        name: "COMPUTER NETWORKS",
+        Credit: "3",
+        SUBCODE: "IT3005",
+         Grade:"O",
+      },
+      {
+        name: "DESIGN & ANALYSIS OF ALGO",
+        Credit: "3",
+        SUBCODE: "CS2012",
+         Grade:"O",
+      },
+      {
+        name: "DBMS",
+        Credit: "4",
+        SUBCODE: "CS2004",
+         Grade:"O",
+      },
+      {
+        name: "SOFTWARE ENGINEERING",
+        Credit: "4",
+        SUBCODE: "IT3003",
+         Grade:"O",
+      },
+      {
+        name: "NETWORK LAB",
+        Credit: "1",
+        SUBCODE: "IT3095",
+         Grade:"O",
+      },
+      {
+        name: "ALGORITHM LAB",
+        Credit: "1",
+        SUBCODE: "CS2098",
+         Grade:"O",
+      },
+      {
+        name: "ELECTIVE-1",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "ELECTIVE-2",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "DBMS LAB",
+        Credit: "1",
+        SUBCODE: "CS2094",
+         Grade:"O",
+      },
+    ],
+    6: [
+      {
+        name: "HASS Elective – III",
+        Credit: "3",
+        SUBCODE: "EC 3036",
+         Grade:"O",
+      },
+      {
+        name: "Cloud Computing",
+        Credit: "3",
+        SUBCODE: "IT 3022",
+         Grade:"O",
+      },
+      {
+        name: "Wireless Mobile Communication",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },{
+        name: "Professional Elective - III",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },{
+        name: "Open Elective – II / MI-I",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      
+    
+      {
+        name: "Universal Human Values",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Wireless Communication & Networking Lab",
+        Credit: "1",
+        SUBCODE: null,
+         Grade:"O",
+      },
+       {
+        name: "Advance Programming Laboratory",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },{
+        name: "Mini Project",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+    ],
+    7: [
+      {
+        name: "SEMESESTE-7",
+        Credit: "3",
+        SUBCODE: "CH10001",
+         Grade:"O",
+      },
+      {
+        name: "MATHEMATICS-II",
+        Credit: "4",
+        SUBCODE: "MA11002",
+         Grade:"O",
+      },
+      {
+        name: "ENGLISH",
+        Credit: "2",
+        SUBCODE: "HS10001",
+         Grade:"O",
+      },
+      {
+        name: "BASIC ELECTRONICS",
+        Credit: "2",
+        SUBCODE: "EC10001",
+         Grade:"O",
+      },
+      {
+        name: "CHEMISTRY LAB",
+        Credit: "1",
+        SUBCODE: "CH19001",
+         Grade:"O",
+      },
+      {
+        name: "YOGA",
+        Credit: "1",
+        SUBCODE: "YG18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING LAB",
+        Credit: "1",
+        SUBCODE: "EX19001",
+         Grade:"O",
+      },
+      {
+        name: "WORKSHOP",
+        Credit: "1",
+        SUBCODE: "ME18001",
+         Grade:"O",
+      },
+      {
+        name: "COMMUNICATION LAB",
+        Credit: "1",
+        SUBCODE: "HS18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "SOCIAL SCIENCE ELECTIVE",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+    ],
+    "8": [
+      {
+        name: "SEMESTER-8",
+        Credit: "3",
+        SUBCODE: "CH10001",
+         Grade:"O",
+      },
+      {
+        name: "MATHEMATICS-II",
+        Credit: "4",
+        SUBCODE: "MA11002",
+         Grade:"O",
+      },
+      {
+        name: "ENGLISH",
+        Credit: "2",
+        SUBCODE: "HS10001",
+         Grade:"O",
+      },
+      {
+        name: "BASIC ELECTRONICS",
+        Credit: "2",
+        SUBCODE: "EC10001",
+         Grade:"O",
+      },
+      {
+        name: "CHEMISTRY LAB",
+        Credit: "1",
+        SUBCODE: "CH19001",
+         Grade:"O",
+      },
+      {
+        name: "YOGA",
+        Credit: "1",
+        SUBCODE: "YG18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING LAB",
+        Credit: "1",
+        SUBCODE: "EX19001",
+         Grade:"O",
+      },
+      {
+        name: "WORKSHOP",
+        Credit: "1",
+        SUBCODE: "ME18001",
+         Grade:"O",
+      },
+      {
+        name: "COMMUNICATION LAB",
+        Credit: "1",
+        SUBCODE: "HS18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "SOCIAL SCIENCE ELECTIVE",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+    ],
+  },
+
+  'CSSE': {
+   1: [
+      {
+        name: "CHEMISTRY",
+        Credit: "3",
+        SUBCODE: "CH10001",
+         Grade:"O",
+      },
+      {
+        name: "Transform Calculus and Numerical Analysis",
+        Credit: "4",
+        SUBCODE: "MA11002",
+         Grade:"O",
+      },
+      {
+        name: "ENGLISH",
+        Credit: "2",
+        SUBCODE: "HS10001",
+         Grade:"O",
+      },
+      {
+        name: "BASIC ELECTRONICS",
+        Credit: "2",
+        SUBCODE: "EC10001",
+         Grade:"O",
+      },
+
+
+      {
+        name: "CHEMISTRY LAB",
+        Credit: "1",
+        SUBCODE: "CH19001",
+         Grade:"O",
+      },
+      {
+        name: "YOGA",
+        Credit: "1",
+        SUBCODE: "YG18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING LAB",
+        Credit: "1",
+        SUBCODE: "EX19001",
+         Grade:"O",
+      },
+      {
+        name: "WORKSHOP",
+        Credit: "1",
+        SUBCODE: "ME18001",
+         Grade:"O",
+      },
+      {
+        name: "COMMUNICATION LAB",
+        Credit: "1",
+        SUBCODE: "HS18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "HASS Elective - I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+    ],
+    2: [
+      {
+        name: "PHYSICS",
+        Credit: "3",
+        SUBCODE: "PH10001",
+         Grade:"O",
+      },
+      {
+        name: "Differential Equations and Linear Algebra",
+        Credit: "4",
+        SUBCODE: "MA11001",
+         Grade:"O",
+      },
+      {
+        name: "SCIENCE OF LIVING SYSTEMS",
+        Credit: "2",
+        SUBCODE: "LS10001",
+         Grade:"O",
+      },
+      {
+        name: "ENVIROMENTAL SCIENCE",
+        Credit: "2",
+        SUBCODE: "CH10003",
+         Grade:"O",
+      },
+      {
+        name: "PHYSICS LAB",
+        Credit: "1",
+        SUBCODE: "PH19001",
+         Grade:"O",
+      },
+      {
+        name: "PROGRAMMING LAB",
+        Credit: "4",
+        SUBCODE: "CS19001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING DRAWING & GRAPHICS",
+        Credit: "1",
+        SUBCODE: "CE18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-II",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "SCIENCE ELECTIVE",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+    ],
+    3: [
+      {
+        name: "DS",
+        Credit: "4",
+        SUBCODE: "CS21001",
+         Grade:"O",
+      },
+
+      {
+        name: "Scientific and Technical Writing",
+        Credit: "2",
+        SUBCODE: "EX20003",
+         Grade:"O",
+      },
+      {
+        name: "COA",
+        Credit: "4",
+        SUBCODE: "CS21002",
+         Grade:"O",
+      },
+      {
+        name: "Digital Systems Design",
+        Credit: "3",
+        SUBCODE: "EC20005",
+         Grade:"O",
+      },
+      {
+        name: "PS",
+        Credit: "4",
+        SUBCODE: "MA21001",
+         Grade:"O",
+      },
+      {
+        name: "OOPJ",
+        Credit: "3",
+        SUBCODE: "CS20004",
+         Grade:"O",
+      },
+      {
+        name: "DS LAB",
+        Credit: "1",
+        SUBCODE: "CS29001",
+         Grade:"O",
+      },
+      {
+        name: "OOPJ LAB",
+        Credit: "1",
+        SUBCODE: "CS29004",
+         Grade:"O",
+      },
+      {
+        name: "DSD LAB",
+        Credit: "1",
+        SUBCODE: "EC29005",
+         Grade:"O",
+      },
+    ],
+    4: [
+      {
+        name: "Industry 4.0 Technologies",
+        Credit: "3",
+        SUBCODE: "EX20001",
+         Grade:"O",
+      },
+      {
+        name: "Discrete Structures",
+        Credit: "4",
+        SUBCODE: "MA21002",
+         Grade:"O",
+      },
+      {
+        name: "OS",
+        Credit: "3",
+        SUBCODE: "CS20002",
+         Grade:"O",
+      },
+      {
+        name: "Engineering Economics",
+        Credit: "3",
+        SUBCODE: "HS30101",
+         Grade:"O",
+      },
+
+      
+      {
+        name: "PDC",
+        Credit: "4",
+        SUBCODE: "EC20006",
+         Grade:"O",
+      },
+      {
+        name: "DBMS",
+        Credit: "3",
+        SUBCODE: "CS20006",
+         Grade:"O",
+      },
+      
+      {
+        name: "OS LAB",
+        Credit: "1",
+        SUBCODE: "CS29002",
+         Grade:"O",
+      },
+      {
+        name: "DBMS LAB",
+        Credit: "1",
+        SUBCODE: "CS29006",
+         Grade:"O",
+      },
+      {
+        name: "Vocational Electives",
+        Credit: "1",
+        SUBCODE: "CS28001",
+         Grade:"O",
+      },
+    ],
+    5: [
+      {
+        name: "COMPUTER NETWORKS",
+        Credit: "3",
+        SUBCODE: "IT3005",
+         Grade:"O",
+      },
+      {
+        name: "IOT",
+        Credit: "3",
+        SUBCODE: "IT3007",
+         Grade:"O",
+      },
+      {
+        name: "Artificial Intelligence",
+        Credit: "3",
+        SUBCODE: "CS 3011",
+         Grade:"O",
+      },
+      {
+        name: "SOFTWARE ENGINEERING",
+        Credit: "4",
+        SUBCODE: "IT3003",
+         Grade:"O",
+      },
+      {
+        name: "NETWORK LAB",
+        Credit: "1",
+        SUBCODE: "IT3095",
+         Grade:"O",
+      },
+      {
+        name: "Advanced Programming LAB",
+        Credit: "1",
+        SUBCODE: "CS2098",
+         Grade:"O",
+      },
+      {
+        name: "ELECTIVE-1",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "ELECTIVE-2",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      
+    ],
+    6: [
+      {
+        name: "HASS Elective -III",
+        Credit: "3",
+        SUBCODE: "IT 3022",
+         Grade:"O",
+      },
+      {
+        name: "Compilers",
+        Credit: "3",
+        SUBCODE: "EC 3033 ",
+         Grade:"O",
+      },
+      {
+        name: "ARM and Advanced Microprocessors",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },{
+        name: "Professional Elective-III",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },{
+        name: "Open Elective –II / MI-I",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      
+    
+      {
+        name: "Universal Human Values",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "ARM Laboratory",
+        Credit: "1",
+        SUBCODE: "IT3098",
+         Grade:"O",
+      },
+      {
+        name: "Advance Programming Laboratory",
+        Credit: "2",
+        SUBCODE: "CS3096",
+         Grade:"O",
+      },
+      {
+        name: "Mini Project",
+        Credit: "2",
+        SUBCODE: "CM3082",
+         Grade:"O",
+      },
+     
+    ],
+    7: [
+      {
+        name: "HS-ELECTIVE-II",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Professional Practice, Law & Ethics",
+        Credit: "2",
+        SUBCODE: "HS4001",
+         Grade:"O",
+      },
+      {
+        name: "OPEN ELECTIVE-II",
+        Credit: "3",
+        SUBCODE: "HS10001",
+         Grade:"O",
+      },
+      {
+        name: "MI-3",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },{
+        name: "MI-4",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },{
+        name: "HO-1",
+        Credit: "3",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "Project-1/Internship",
+        Credit: "3",
+        SUBCODE: "CM4081",
+         Grade:"O",
+      },
+      {
+        name: "Practical Training",
+        Credit: "2",
+        SUBCODE: "CM4083",
+         Grade:"O",
+      },
+      {
+        name: "Project-Minor/ LAB",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      
+    ],
+    "8": [
+      {
+        name: "SEMESTER-8",
+        Credit: "3",
+        SUBCODE: "CH10001",
+         Grade:"O",
+      },
+      {
+        name: "MATHEMATICS-II",
+        Credit: "4",
+        SUBCODE: "MA11002",
+         Grade:"O",
+      },
+      {
+        name: "ENGLISH",
+        Credit: "2",
+        SUBCODE: "HS10001",
+         Grade:"O",
+      },
+      {
+        name: "BASIC ELECTRONICS",
+        Credit: "2",
+        SUBCODE: "EC10001",
+         Grade:"O",
+      },
+      {
+        name: "CHEMISTRY LAB",
+        Credit: "1",
+        SUBCODE: "CH19001",
+         Grade:"O",
+      },
+      {
+        name: "YOGA",
+        Credit: "1",
+        SUBCODE: "YG18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING LAB",
+        Credit: "1",
+        SUBCODE: "EX19001",
+         Grade:"O",
+      },
+      {
+        name: "WORKSHOP",
+        Credit: "1",
+        SUBCODE: "ME18001",
+         Grade:"O",
+      },
+      {
+        name: "COMMUNICATION LAB",
+        Credit: "1",
+        SUBCODE: "HS18001",
+         Grade:"O",
+      },
+      {
+        name: "ENGINEERING ELECTIVE-I",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+      {
+        name: "SOCIAL SCIENCE ELECTIVE",
+        Credit: "2",
+        SUBCODE: null,
+         Grade:"O",
+      },
+    ],
+  },
+
+
 };
 
+// Student Details Form Component - Moved outside to prevent recreation
+const StudentDetailsForm = ({ 
+  studentDetails, 
+  setStudentDetails, 
+  isStudentDetailsValid, 
+  setShowStudentForm, 
+  branches 
+}: {
+  studentDetails: StudentDetails;
+  setStudentDetails: React.Dispatch<React.SetStateAction<StudentDetails>>;
+  isStudentDetailsValid: boolean;
+  setShowStudentForm: React.Dispatch<React.SetStateAction<boolean>>;
+  branches: Record<string, string>;
+}) => (
+  <Card className="bg-gray-900/70 border-gray-800 backdrop-blur-sm">
+    <CardHeader>
+      <CardTitle className="text-white flex items-center gap-2">
+        <GraduationCap className="w-5 h-5 text-blue-400" />
+        Student Information
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <Label htmlFor="student-name" className="text-gray-300 text-sm mb-2 block">Full Name *</Label>
+          <Input
+            id="student-name"
+            placeholder="Enter your full name"
+            value={studentDetails.name}
+            onChange={(e) => setStudentDetails(prev => ({ ...prev, name: e.target.value }))}
+            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <Label htmlFor="student-roll" className="text-gray-300 text-sm mb-2 block">Roll Number *</Label>
+          <Input
+            id="student-roll"
+            placeholder="Enter your roll number"
+            value={studentDetails.rollNumber}
+            onChange={(e) => setStudentDetails(prev => ({ ...prev, rollNumber: e.target.value }))}
+            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <Label htmlFor="student-branch" className="text-gray-300 text-sm mb-2 block">Branch *</Label>
+          <Select
+            value={studentDetails.branch}
+            onValueChange={(value) => setStudentDetails(prev => ({ ...prev, branch: value }))}
+          >
+            <SelectTrigger id="student-branch" className="bg-gray-800 border-gray-600 text-white focus:border-blue-500">
+              <SelectValue placeholder="Select your branch" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-600">
+              {Object.entries(branches).map(([key, name]) => (
+                <SelectItem key={key} value={name} className="text-white hover:bg-gray-700">
+                  {name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="student-year" className="text-gray-300 text-sm mb-2 block">Year *</Label>
+          <Select
+            value={studentDetails.year}
+            onValueChange={(value) => setStudentDetails(prev => ({ ...prev, year: value }))}
+          >
+            <SelectTrigger id="student-year" className="bg-gray-800 border-gray-600 text-white focus:border-blue-500">
+              <SelectValue placeholder="Select your year" />
+            </SelectTrigger>
+            <SelectContent className="bg-gray-800 border-gray-600">
+              {['1st Year', '2nd Year', '3rd Year', '4th Year'].map((year) => (
+                <SelectItem key={year} value={year} className="text-white hover:bg-gray-700">
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="student-email" className="text-gray-300 text-sm mb-2 block">Email *</Label>
+          <Input
+            id="student-email"
+            type="email"
+            placeholder="Enter your email"
+            value={studentDetails.email}
+            onChange={(e) => setStudentDetails(prev => ({ ...prev, email: e.target.value }))}
+            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+          />
+        </div>
+        <div>
+          <Label htmlFor="student-phone" className="text-gray-300 text-sm mb-2 block">Phone Number *</Label>
+          <Input
+            id="student-phone"
+            type="tel"
+            placeholder="Enter your phone number"
+            value={studentDetails.phone}
+            onChange={(e) => setStudentDetails(prev => ({ ...prev, phone: e.target.value }))}
+            className="bg-gray-800 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500"
+          />
+        </div>
+      </div>
+      
+      <div className="flex justify-between items-center pt-4">
+        <div className="flex items-center gap-2">
+          <div className={`w-3 h-3 rounded-full ${isStudentDetailsValid ? 'bg-green-500' : 'bg-red-500'}`}></div>
+          <span className="text-sm text-gray-400">
+            {isStudentDetailsValid ? 'All details completed' : 'Please fill all required fields'}
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowStudentForm(false)}
+            className="border-gray-600 text-gray-300 hover:bg-gray-800"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              if (isStudentDetailsValid) {
+                setShowStudentForm(false);
+                toast.success('Student details saved successfully!');
+              } else {
+                toast.error('Please fill all required fields');
+              }
+            }}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+            disabled={!isStudentDetailsValid}
+          >
+            Save Details
+          </Button>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
 export default function AdvancedCGPACalculator() {
+  // Student Details State
+  const [studentDetails, setStudentDetails] = useState<StudentDetails>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('studentDetails');
+      if (saved) return JSON.parse(saved);
+    }
+    return {
+      name: '',
+      rollNumber: '',
+      branch: '',
+      email: '',
+      phone: '',
+      year: ''
+    };
+  });
+  const [showStudentForm, setShowStudentForm] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+
   // Move all useState hooks to the top
   // SGPA Calculator State
   const [sgpaCalculatorState, setSgpaCalculatorState] = useState<SGPACalculatorState>(() => {
@@ -345,14 +2019,9 @@ export default function AdvancedCGPACalculator() {
   const [sgpaResult, setSgpaResult] = useState(0);
 
   // CGPA Calculator State
-  const [cgpaSemesters, setCgpaSemesters] = useState<CGPASemester[]>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('cgpaSemesters');
-      if (saved) return JSON.parse(saved);
-    }
-    return [];
-  });
+  const [cgpaSemesters, setCgpaSemesters] = useState<CGPASemester[]>([]);
   const [cgpaResult, setCgpaResult] = useState(0);
+  const [cgpaSelectedBranch, setCgpaSelectedBranch] = useState<keyof typeof branchSubjects>('CSE');
 
   // Aggregate Calculator State
   const [selectedBranch, setSelectedBranch] = useState<keyof typeof branchSubjects>(() => {
@@ -386,19 +2055,31 @@ export default function AdvancedCGPACalculator() {
     return 8;
   });
 
+  // Persist Student Details
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('studentDetails', JSON.stringify(studentDetails));
+    }
+  }, [studentDetails]);
+
+  // Validate Student Details
+  const isStudentDetailsValid = useMemo(() => {
+    return studentDetails.name.trim() !== '' && 
+           studentDetails.rollNumber.trim() !== '' && 
+           studentDetails.branch.trim() !== '' && 
+           studentDetails.email.trim() !== '' &&
+           studentDetails.phone.trim() !== '' &&
+           studentDetails.year.trim() !== '';
+  }, [studentDetails]);
+
+
+
   // Persist SGPA Calculator State
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('sgpaCalculatorState', JSON.stringify(sgpaCalculatorState));
     }
   }, [sgpaCalculatorState]);
-
-  // Persist CGPA Semesters
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('cgpaSemesters', JSON.stringify(cgpaSemesters));
-    }
-  }, [cgpaSemesters]);
 
   // Persist Aggregate Calculator State
   useEffect(() => {
@@ -415,12 +2096,12 @@ export default function AdvancedCGPACalculator() {
     const semesterSubjects = branchSubjects[sgpaCalculatorState.selectedBranch][sgpaCalculatorState.selectedSemester as keyof typeof branchSubjects[typeof sgpaCalculatorState.selectedBranch]];
     
     if (semesterSubjects) {
-      const initializedSubjects = semesterSubjects.map((subject, index) => ({
+      const initializedSubjects = semesterSubjects.map((subject: any, index) => ({
         id: `${sgpaCalculatorState.selectedSemester}-${index}`,
         name: subject.name,
-        credits: subject.credits,
-        grade: 'A',
-        gradePoints: 9
+        credits: Number(subject.credits || subject.Credit || 0),
+        grade: 'O',
+        gradePoints: 10
       }));
       
       setSgpaCalculatorState(prev => ({
@@ -434,17 +2115,17 @@ export default function AdvancedCGPACalculator() {
   useEffect(() => {
     const initSemesters = Array.from({ length: 8 }, (_, index) => {
       const semesterNum = index + 1;
-      const subjects = branchSubjects[selectedBranch][semesterNum as keyof typeof branchSubjects[typeof selectedBranch]];
+      const subjects = branchSubjects[selectedBranch][semesterNum as keyof typeof branchSubjects[typeof selectedBranch]] || [];
       
       return {
         id: semesterNum.toString(),
         name: `Semester ${semesterNum}`,
-        subjects: subjects.map((subject, subIndex) => ({
+        subjects: subjects.map((subject: any, subIndex) => ({
           id: `${semesterNum}-${subIndex}`,
           name: subject.name,
-          credits: subject.credits,
-          grade: 'A',
-          gradePoints: 9
+          credits: Number(subject.credits || subject.Credit || 0),
+          grade: 'O',
+          gradePoints: 10
         })),
         sgpa: 0
       };
@@ -497,11 +2178,19 @@ export default function AdvancedCGPACalculator() {
 
   // CGPA Calculator Functions
   const addCgpaSemester = () => {
+    const semesterNumber = cgpaSemesters.length + 1;
+    
+    // Calculate total credits for the selected branch and semester
+    const semesterSubjects = branchSubjects[cgpaSelectedBranch][semesterNumber as keyof typeof branchSubjects[typeof cgpaSelectedBranch]] || [];
+    const totalCredits = semesterSubjects.reduce((sum: number, subject: any) => {
+      return sum + Number(subject.credits || subject.Credit || 0);
+    }, 0);
+    
     const newSemester: CGPASemester = {
       id: Date.now().toString(),
-      name: `Semester ${cgpaSemesters.length + 1}`,
+      name: `Semester ${semesterNumber}`,
       sgpa: 0,
-      credits: 20
+      credits: totalCredits || 20 // fallback to 20 if no subjects found
     };
     setCgpaSemesters([...cgpaSemesters, newSemester]);
   };
@@ -596,12 +2285,11 @@ export default function AdvancedCGPACalculator() {
 
   const getGradeColor = (grade: string) => {
     const colors = {
-      'A+': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-      'A': 'bg-green-500/20 text-green-400 border-green-500/30',
-      'B+': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+      'O': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+      'E': 'bg-green-500/20 text-green-400 border-green-500/30',
+      'A': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
       'B': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-      'C+': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-      'C': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+      'C': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
       'D': 'bg-red-500/20 text-red-400 border-red-500/30',
       'F': 'bg-red-600/20 text-red-300 border-red-600/30'
     };
@@ -618,6 +2306,9 @@ export default function AdvancedCGPACalculator() {
   };
 
   const generatePDF = (type: 'sgpa' | 'cgpa' | 'aggregate', data: any) => {
+    // Show celebration animation
+    setShowCelebration(true);
+    
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
     const pageHeight = pdf.internal.pageSize.getHeight();
@@ -645,8 +2336,6 @@ export default function AdvancedCGPACalculator() {
       aggregate: 'Kalinga Institute of Industrial Technology'
     };
     
-    //make this text in green color
-    pdf.setTextColor(16, 185, 129);
     pdf.text(titles[type], pageWidth / 2, 30, { align: 'center' });
     
     pdf.setTextColor(161, 161, 170);
@@ -662,13 +2351,13 @@ export default function AdvancedCGPACalculator() {
     pdf.setLineWidth(0.3);
     pdf.roundedRect(20, yPosition, pageWidth - 40, studentBoxHeight, 6, 6, 'S');
 
-    // Hardcoded student details
-    const studentDetails = {
-      name: 'Ranjit Kumar',
-      roll: 'KIIT22CSE1234',
-      branch: 'Computer Science Engineering',
+    // Use actual student details from state
+    const studentInfo = {
+      name: studentDetails.name,
+      roll: studentDetails.rollNumber,
+      branch: studentDetails.branch,
       semester: type === 'sgpa' ? data.semester : (type === 'aggregate' ? `${data.fromSemester} - ${data.toSemester}` : 'All'),
-      email: 'ranjit.kumar@kiit.ac.in',
+      email: studentDetails.email,
     };
 
     pdf.setFontSize(13);
@@ -679,27 +2368,23 @@ export default function AdvancedCGPACalculator() {
     pdf.setFontSize(11);
     pdf.setTextColor(200, 200, 200);
     // Row 1: Name | Roll No
-    const leftLabelX = 25;
-    const leftValueX = 40;
-    const rightLabelX = 110;
-    const rightValueX = 130;
-    pdf.text('Name:', leftLabelX, yPosition + 18);
-    pdf.text('Roll No:', rightLabelX, yPosition + 18);
+    pdf.text('Name:', 25, yPosition + 18);
+    pdf.text('Roll No:', 110, yPosition + 18);
     pdf.setTextColor(59, 130, 246);
-    pdf.text(studentDetails.name, leftValueX, yPosition + 18);
-    pdf.text(studentDetails.roll, rightValueX, yPosition + 18);
+    pdf.text(studentInfo.name, 25 + 15, yPosition + 18);
+    pdf.text(studentInfo.roll, 110 + 15, yPosition + 18);
     pdf.setTextColor(200, 200, 200);
     // Row 2: Branch | Semester
-    pdf.text('Branch:', leftLabelX, yPosition + 26);
-    pdf.text('Semester:', rightLabelX, yPosition + 26);
+    pdf.text('Branch:', 25, yPosition + 26);
+    pdf.text('Semester:', 110, yPosition + 26);
     pdf.setTextColor(59, 130, 246);
-    pdf.text(studentDetails.branch, leftValueX, yPosition + 26);
-    pdf.text(String(studentDetails.semester), rightValueX, yPosition + 26);
+    pdf.text(studentInfo.branch, 25 + 15, yPosition + 26);
+    pdf.text(String(studentInfo.semester), 110 + 22, yPosition + 26);
     pdf.setTextColor(200, 200, 200);
     // Row 3: Email (spans width)
-    pdf.text('Email:', leftLabelX, yPosition + 34);
+    pdf.text('Email:', 25, yPosition + 34);
     pdf.setTextColor(59, 130, 246);
-    pdf.text(studentDetails.email, leftValueX, yPosition + 34);
+    pdf.text(studentInfo.email, 25 + 15, yPosition + 34);
 
     yPosition = yPosition + studentBoxHeight + 10;
     
@@ -771,9 +2456,9 @@ export default function AdvancedCGPACalculator() {
           pdf.setTextColor(161, 161, 170);
           pdf.text(subject.credits.toString(), pageWidth - 115, subjectY);
           const gradeColors = {
-            'A+': [16, 185, 129], 'A': [34, 197, 94], 'B+': [59, 130, 246],
-            'B': [6, 182, 212], 'C+': [245, 158, 11], 'C': [249, 115, 22],
-            'D': [239, 68, 68], 'F': [220, 38, 38]
+            'O': [16, 185, 129], 'E': [34, 197, 94], 'A': [59, 130, 246],
+            'B': [6, 182, 212], 'C': [245, 158, 11], 'D': [249, 115, 22],
+            'F': [239, 68, 68]
           };
           const gradeColor = gradeColors[subject.grade as keyof typeof gradeColors] || [255, 255, 255];
           pdf.setTextColor(gradeColor[0], gradeColor[1], gradeColor[2]);
@@ -941,9 +2626,9 @@ export default function AdvancedCGPACalculator() {
             pdf.text(subject.credits.toString(), pageWidth - 115, subjectY);
             
             const gradeColors = {
-              'A+': [16, 185, 129], 'A': [34, 197, 94], 'B+': [59, 130, 246],
-              'B': [6, 182, 212], 'C+': [245, 158, 11], 'C': [249, 115, 22],
-              'D': [239, 68, 68], 'F': [220, 38, 38]
+              'O': [16, 185, 129], 'E': [34, 197, 94], 'A': [59, 130, 246],
+              'B': [6, 182, 212], 'C': [245, 158, 11], 'D': [249, 115, 22],
+              'F': [239, 68, 68]
             };
             const gradeColor = gradeColors[subject.grade as keyof typeof gradeColors] || [255, 255, 255];
             pdf.setTextColor(gradeColor[0], gradeColor[1], gradeColor[2]);
@@ -976,20 +2661,41 @@ export default function AdvancedCGPACalculator() {
     const fileName = `${type.toUpperCase()}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
     pdf.save(fileName);
     toast.success(`${type.toUpperCase()} report generated successfully!`);
+    
+    // Hide celebration animation after 3 seconds
+    setTimeout(() => {
+      setShowCelebration(false);
+    }, 3000);
   };
 
-  const getBranchIcon = (branch: keyof typeof branches) => {
+  const getBranchIcon = (branch: keyof typeof branches, color: string = "text-white") => {
     const icons = {
-      'CSE': <Code className="w-5 h-5" />,
-      'CSSE': <Code className="w-5 h-5" />,
-      'CSCE': <Code className="w-5 h-5" />,
-      'IT': <Code className="w-5 h-5" />
+      'CSE': <Code className={`w-5 h-5 ${color}`} />,
+      'CSSE': <Cpu className={`w-5 h-5 ${color}`} />,
+      'CSCE': <Zap className={`w-5 h-5 ${color}`} />,
+      'IT': <Database className={`w-5 h-5 ${color}`} />
     };
     return icons[branch];
   };
 
+
+
+  // Celebration Animation Component
+  const CelebrationAnimation = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-gradient-to-r from-green-500 to-blue-500 p-8 rounded-2xl text-center text-white animate-pulse">
+        <div className="text-6xl mb-4">🎉</div>
+        <h2 className="text-3xl font-bold mb-2">Congratulations!</h2>
+        <p className="text-xl">Your PDF report has been generated successfully!</p>
+        <div className="mt-4 text-sm opacity-80">Report downloaded to your device</div>
+      </div>
+    </div>
+  );
+
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 p-4">
+      {showCelebration && <CelebrationAnimation />}
+      
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header Section */}
         <header className="text-center space-y-4 py-8">
@@ -1006,8 +2712,79 @@ export default function AdvancedCGPACalculator() {
           </p>
         </header>
 
+        {/* Student Details Section */}
+        {!isStudentDetailsValid && !showStudentForm && (
+          <div className="space-y-4">
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-2 text-red-400">
+                <div className="w-2 h-2 bg-red-400 rounded-full"></div>
+                <span>Student information required to proceed</span>
+              </div>
+            </div>
+            <Card className="bg-gray-900/70 border-gray-800 backdrop-blur-sm">
+              <CardContent className="p-6 text-center">
+                <div className="mb-4">
+                  <GraduationCap className="w-12 h-12 text-blue-400 mx-auto mb-2" />
+                  <h3 className="text-xl font-semibold text-white mb-2">Complete Your Profile</h3>
+                  <p className="text-gray-400">Please provide your student details to access the calculators</p>
+                </div>
+                <Button
+                  onClick={() => setShowStudentForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  Enter Student Details
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Student Details Form - Always show when showStudentForm is true */}
+        {showStudentForm && (
+          <div className="space-y-4">
+            <div className="text-center">
+              <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 rounded-lg px-4 py-2 text-blue-400">
+                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <span>Please fill in your student details</span>
+              </div>
+            </div>
+            <StudentDetailsForm 
+              studentDetails={studentDetails}
+              setStudentDetails={setStudentDetails}
+              isStudentDetailsValid={isStudentDetailsValid}
+              setShowStudentForm={setShowStudentForm}
+              branches={branches}
+            />
+          </div>
+        )}
+
+        {/* Student Info Display - Only show when form is not being shown */}
+        {isStudentDetailsValid && !showStudentForm && (
+          <Card className="bg-gray-900/50 border-gray-800 backdrop-blur-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                  <div>
+                    <p className="text-white font-medium">{studentDetails.name}</p>
+                    <p className="text-gray-400 text-sm">{studentDetails.rollNumber} • {studentDetails.branch}</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowStudentForm(true)}
+                  className="border-gray-600 text-gray-300 bg-gray-800 hover:bg-cyan-700 hover:text-white"
+                >
+                  Edit Details
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Main Calculator Section */}
-        <section aria-label="Academic Calculator Tools">
+        <section aria-label="Academic Calculator Tools" className={!isStudentDetailsValid ? 'opacity-50 pointer-events-none' : ''}>
           <Tabs defaultValue="sgpa" className="w-full">
             <TabsList className="grid w-full grid-cols-3 bg-gray-900/50 border border-gray-800" role="tablist">
               <TabsTrigger value="sgpa" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white" role="tab" aria-selected="true">
@@ -1051,7 +2828,7 @@ export default function AdvancedCGPACalculator() {
                               {Object.entries(branches).map(([key, name]) => (
                                 <SelectItem key={key} value={key} className="text-white hover:bg-gray-700">
                                   <div className="flex items-center gap-2">
-                                    {getBranchIcon(key as keyof typeof branches)}
+                                    {getBranchIcon(key as keyof typeof branches, selectedBranch === key ? "text-white" : "text-gray-600")}
                                     <div>
                                       <p className="font-medium">{key}</p>
                                       <p className="text-xs text-gray-400">{name}</p>
@@ -1193,6 +2970,45 @@ export default function AdvancedCGPACalculator() {
             <TabsContent value="cgpa" className="space-y-6" role="tabpanel" aria-labelledby="cgpa-tab">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
+                  {/* Branch Selection for CGPA */}
+                  <Card className="bg-gray-900/70 border-gray-800 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="text-white flex items-center gap-2">
+                        <Target className="w-5 h-5 text-purple-400" aria-hidden="true" />
+                        Branch Selection for Credit Calculation
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div>
+                        <Label htmlFor="cgpa-branch-select" className="text-gray-300 text-sm mb-2 block">Select Branch</Label>
+                        <Select
+                          value={cgpaSelectedBranch}
+                          onValueChange={(value) => setCgpaSelectedBranch(value as keyof typeof branchSubjects)}
+                        >
+                          <SelectTrigger id="cgpa-branch-select" className="bg-gray-800 border-gray-600 text-white focus:border-purple-500">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-gray-800 border-gray-600">
+                            {Object.entries(branches).map(([key, name]) => (
+                              <SelectItem key={key} value={key} className="text-white hover:bg-gray-700">
+                                <div className="flex items-center gap-2">
+                                  {getBranchIcon(key as keyof typeof branches, "text-white")}
+                                  <div>
+                                    <p className="font-medium">{key}</p>
+                                    <p className="text-xs text-gray-400">{name}</p>
+                                  </div>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-gray-400 text-xs mt-2">
+                          Select your branch to automatically calculate credits when adding semesters
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   <Card className="bg-gray-900/70 border-gray-800 backdrop-blur-sm">
                     <CardHeader>
                       <div className="flex items-center justify-between">
@@ -1330,11 +3146,11 @@ export default function AdvancedCGPACalculator() {
                           className={`p-4 h-auto flex flex-col items-center gap-2 ${
                             selectedBranch === key 
                               ? 'bg-green-600 hover:bg-green-700 text-white border-0' 
-                              : 'border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white'
+                              : 'border-gray-600 text-gray-300 hover:bg-cyan-700 bg-gray-800 hover:text-white'
                           }`}
                         >
                           <div className="p-2 bg-green-500/20 rounded-lg">
-                            {getBranchIcon(key as keyof typeof branches)}
+                            {getBranchIcon(key as keyof typeof branches, selectedBranch === key ? "text-white" : "text-gray-600")}
                           </div>
                           <div className="text-center">
                             <p className="font-semibold">{key}</p>
