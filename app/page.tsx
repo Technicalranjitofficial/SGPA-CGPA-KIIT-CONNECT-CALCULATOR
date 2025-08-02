@@ -2700,7 +2700,7 @@ export default function AdvancedCGPACalculator() {
         {/* Header Section */}
         <header className="text-center space-y-4 py-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl border border-blue-500/30" aria-hidden="true">
+            <div className="p-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 hidden md:block rounded-xl border border-blue-500/30" aria-hidden="true">
               <GraduationCap className="w-8 h-8 text-blue-400" />
             </div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-blue-400 bg-clip-text text-transparent">

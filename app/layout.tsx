@@ -39,20 +39,20 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://kiit-connect.vercel.app'),
+  metadataBase: new URL('https://calculator.kiitconnect.com'),
   alternates: {
     canonical: '/',
   },
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://kiit-connect.vercel.app',
+    url: 'https://calculator.kiitconnect.com',
     title: 'KIIT-CONNECT Academic Calculator - Advanced CGPA, SGPA & Aggregate Calculator',
     description: 'Advanced academic performance calculator for KIIT students. Calculate SGPA, CGPA, and aggregate scores with branch-specific subjects. Generate professional PDF reports.',
     siteName: 'KIIT-CONNECT Academic Calculator',
     images: [
       {
-        url: '/og-image.png',
+        url: '/og.png',
         width: 1200,
         height: 630,
         alt: 'KIIT-CONNECT Academic Calculator - Advanced CGPA, SGPA & Aggregate Calculator',
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'KIIT-CONNECT Academic Calculator - Advanced CGPA, SGPA & Aggregate Calculator',
     description: 'Advanced academic performance calculator for KIIT students. Calculate SGPA, CGPA, and aggregate scores with branch-specific subjects.',
-    images: ['/og-image.png'],
+    images: ['/og.png'],
     creator: '@kiitconnect',
   },
   robots: {
@@ -77,11 +77,11 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  verification: {
-    google: 'your-google-verification-code',
-    yandex: 'your-yandex-verification-code',
-    yahoo: 'your-yahoo-verification-code',
-  },
+  // verification: {
+  //   google: 'your-google-verification-code',
+  //   yandex: 'your-yandex-verification-code',
+  //   yahoo: 'your-yahoo-verification-code',
+  // },
   category: 'education',
   classification: 'Academic Tools',
 }
@@ -94,14 +94,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#1f2937" />
         <meta name="msapplication-TileColor" content="#1f2937" />
-        
+        <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-title" content="Kiitconnect" />
+        <link rel="manifest" href="/site.webmanifest" />
+
         {/* Structured Data */}
         <script
           type="application/ld+json"
@@ -111,7 +112,7 @@ export default function RootLayout({
               "@type": "WebApplication",
               "name": "KIIT-CONNECT Academic Calculator",
               "description": "Advanced academic performance calculator for KIIT students. Calculate SGPA, CGPA, and aggregate scores with branch-specific subjects.",
-              "url": "https://kiit-connect.vercel.app",
+              "url": "https://calculator.kiitconnect.com",
               "applicationCategory": "EducationalApplication",
               "operatingSystem": "Web Browser",
               "offers": {
@@ -122,12 +123,12 @@ export default function RootLayout({
               "author": {
                 "@type": "Organization",
                 "name": "KIIT-CONNECT",
-                "url": "https://kiit-connect.vercel.app"
+                "url": "https://calculator.kiitconnect.com"
               },
               "publisher": {
                 "@type": "Organization",
-                "name": "KIIT University",
-                "url": "https://kiit.ac.in"
+                "name": "Kiitconnect",
+                "url": "https://kiitconnect.com"
               },
               "aggregateRating": {
                 "@type": "AggregateRating",
@@ -137,7 +138,7 @@ export default function RootLayout({
             })
           }}
         />
-        
+
         {/* Additional SEO Meta Tags */}
         <meta name="application-name" content="KIIT-CONNECT Academic Calculator" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -145,7 +146,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="KIIT-CONNECT" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
-        
+
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

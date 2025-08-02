@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://kiit-connect.vercel.app/sitemap.xml
+Sitemap: https://calculator.kiitconnect.com/sitemap.xml
 
 # Crawl-delay
 Crawl-delay: 1
