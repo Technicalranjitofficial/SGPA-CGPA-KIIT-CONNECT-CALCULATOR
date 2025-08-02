@@ -84,7 +84,7 @@ const branches = {
   'IT': 'Information Technology',
 };
 
-export const branchSubjects = {
+const branchSubjects = {
   'CSE': {
     1: [
       {
